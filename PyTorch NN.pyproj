@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>19d22904-f17d-416c-8493-b396ef4b95df</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>ImageClassifier.py</StartupFile>
+    <StartupFile>LetterClassifier.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -23,6 +23,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ImageClassifier.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="LetterClassifier.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="PyTorch_NN.py" />
