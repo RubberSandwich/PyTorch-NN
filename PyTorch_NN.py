@@ -1,49 +1,97 @@
 import torch
-import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+import os
+import random
+from PIL import Image
+from pathlib import Path
+import numpy as np
+import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+import torch.optim as optim
+import datetime, time
 
-class Net(nn.Module):
-	def __init__(self):
-		super(Net, self).__init__()
-		self.conv1 = nn.Conv2d(1,6,5)
-		self.conv2 = nn.Conv2d(6,16,5)
+#Monochrome, 32x32 bitmap, pen tool 3px thickness, a-z lower case, 26 letters abcdef ghijklmnop qrstuvxyz
 
-		self.fc1 = nn.Linear(16*5*5, 120)
-		self.fc2 = nn.Linear(120,84)
-		self.fc3 = nn.Linear(84,10)
+#Coarse parameters
+train=True
+epochs=25
 
-	def forward(self, x):
-		
-		x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
-		x = F.max_pool2d(F.relu(self.conv2(x)), 2)
-		x = torch.flatten(x, 1)
-		x = F.relu(self.fc1(x))
-		x = F.relu(self.fc2(x))
-		x = self.fc3(x)
-		return x
+device = 'cpu'#'cuda' if torch.cuda.is_available() else 'cpu' TODO: Something with assertion while using cuda breaks, compile with TORCH_USE_CUDA_DSA suggestion
 
-net = Net()
+data_path = Path("data/letter_classification/")
+train_dir = data_path / "train"
+test_dir = data_path / "test"
 
-learning_rate = 1e-2
-optimizer = optim.SGD(net.parameters(),learning_rate)
-optimizer.zero_grad()
+class LetterNet(nn.Module):
+    def __init__(self):
+        super(LetterNet, self).__init__()
+        self.conv1 = nn.Conv2d(3, 25, 5)
+        self.pool = nn.MaxPool2d(2,2)
+        self.conv2 = nn.Conv2d(25,35,5)
+        self.fc1 = nn.Linear(35*5*5,120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 26)
 
-input = torch.rand(1,1,32,32)
-out = net(input)
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 
-target = torch.randn(10)
-target = target.view(1, -1)
-criterion = nn.MSELoss()
+net = LetterNet()
+net.to(device)
 
-loss = criterion(out, target)
+data_transform = transforms.Compose([
+    transforms.TrivialAugmentWide(),
+    transforms.ToTensor()
+    ])
 
-loss.backward()
+training_data = datasets.ImageFolder(root=train_dir,
+                                          transform=data_transform,
+                                          target_transform=None)
 
-print('conv1.weight before optim')
-print(net.conv1.weight)
+#testing_data = datasets.ImageFolder(root=test_dir,
+#                                    transform=data_transform)
+#Not made yet :)
 
-optimizer.step()
+training_dataloader = DataLoader(dataset=training_data,
+                                 batch_size=1,
+                                 num_workers=0,
+                                 shuffle=True)
 
-print('conv1.weight before optim')
-print(net.conv1.weight)
+letter_classes = ('a','b','c','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+
+learning_rate = 1e-3
+
+if train:
+    criterion = nn.CrossEntropyLoss()
+    optimiser = optim.SGD(net.parameters(),lr=learning_rate,momentum=.9)
+
+    for epoch in range(epochs):
+        running_loss = 0.0
+        for i,data in enumerate(training_dataloader,0):
+            inputs, labels = data[0].to(device), data[1].to(device)
+
+            optimiser.zero_grad()
+
+            outputs = net(inputs)
+
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimiser.step()
+
+            running_loss += loss.item()
+            if i% 250 == 249: #Print every 250 mini batches
+                print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 250:.3f}')
+                running_loss = 0.0
+    print('Finished training!')
+
+    save_path = "./savedstates/letter_net.pth"
+
+    torch.save(net.state_dict(), save_path)
+    print(f'Saved state as {save_path}')
