@@ -15,14 +15,16 @@ import datetime, time
 #Monochrome, 32x32 bitmap, pen tool 3px thickness, a-z lower case, 26 letters abcdef ghijklmnop qrstuvxyz
 
 #Coarse parameters
-train=True
-epochs=25
+train=False #False means testing mode
+save=False
+epochs=50
 
-device = 'cpu'#'cuda' if torch.cuda.is_available() else 'cpu' TODO: Something with assertion while using cuda breaks, compile with TORCH_USE_CUDA_DSA suggestion
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 data_path = Path("data/letter_classification/")
 train_dir = data_path / "train"
 test_dir = data_path / "test"
+save_path = "./savedstates/letter_net.pth"
 
 class LetterNet(nn.Module):
     def __init__(self):
@@ -87,11 +89,34 @@ if train:
 
             running_loss += loss.item()
             if i% 250 == 249: #Print every 250 mini batches
+                print(f"Data label: {labels[0]}")
+                print(f"Model prediction: {outputs[0]}")
+
                 print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 250:.3f}')
                 running_loss = 0.0
     print('Finished training!')
 
-    save_path = "./savedstates/letter_net.pth"
+    if save:
+        torch.save(net.state_dict(), save_path)
+        print(f'Saved state as {save_path}')
+    print('Exiting')
 
-    torch.save(net.state_dict(), save_path)
-    print(f'Saved state as {save_path}')
+else:
+    net.load_state_dict(torch.load(save_path))
+    net.eval()
+
+    loss_fn = nn.CrossEntropyLoss()
+
+    test_single = datasets.ImageFolder(root=test_dir / "single", 
+                                       transform=data_transform)
+    
+    test_single_load = DataLoader(dataset=test_single, batch_size=1, 
+                                  num_workers=0, shuffle=True)
+
+    with torch.no_grad():
+        for i,data in enumerate(test_single_load,0):
+            inputs, labels = data[0].to(device), data[1].to(device)
+
+            outputs = net(inputs)
+
+            print(outputs.type(torch.float).sum().item())
