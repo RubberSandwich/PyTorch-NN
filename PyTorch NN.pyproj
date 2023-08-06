@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>19d22904-f17d-416c-8493-b396ef4b95df</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>LetterClassifier.py</StartupFile>
+    <StartupFile>PyTorch_NN.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
