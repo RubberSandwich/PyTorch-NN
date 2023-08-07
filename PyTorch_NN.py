@@ -15,10 +15,10 @@ import datetime, time
 #Monochrome, 28x28 bitmap, pen tool 3px thickness, a-z lower case, 26 letters abcdef ghijklmnop qrstuvxyz
 
 #Coarse parameters
-train=False
+train=True
 epochs=1
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu' #TODO: Something with assertion while using cuda breaks, compile with TORCH_USE_CUDA_DSA suggestion
+device = 'cpu'#'cuda' if torch.cuda.is_available() else 'cpu' #TODO: Something with assertion while using cuda breaks, compile with TORCH_USE_CUDA_DSA suggestion
 
 data_path = Path("data/letter_classification/")
 train_dir = data_path / "train"
@@ -27,12 +27,12 @@ test_dir = data_path / "test"
 class LetterNet(nn.Module):
     def __init__(self):
         super(LetterNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 50, 28)
+        self.conv1 = nn.Conv2d(1, 50, 5)
         self.pool = nn.MaxPool2d(2,2)
-        self.conv2 = nn.Conv2d(50,60,5)
+        self.conv2 = nn.Conv2d(50,60,3)
         self.fc1 = nn.Linear(60*5*5,200)
         self.fc2 = nn.Linear(200, 84)
-        self.fc3 = nn.Linear(84, 26)
+        self.fc3 = nn.Linear(84, 27)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
@@ -47,7 +47,7 @@ net = LetterNet()
 net.to(device)
 
 data_transform = transforms.Compose([
-    transforms.TrivialAugmentWide(),
+    #transforms.TrivialAugmentWide(),
     transforms.ToTensor()
     ])
 
@@ -77,9 +77,19 @@ letter_classes = ('a','b','c','e','f','g','h','i','j','k','l','m','n','o','p','q
 
 learning_rate = 1e-3
 
-inputs, labels = training_data[0], training_data[1]
+#figure = plt.figure(figsize=(28,28))
+#cols, rows = 3, 3
+#for i in range(1, cols*rows + 1):
+#    sample_idx = torch.randint(len(training_data), size=(1,)).item()
+#    img, label = training_data[sample_idx]
+#    figure.add_subplot(rows, cols, i)
+#    plt.title(label)
+#    plt.imshow(img.squeeze(), cmap="gray")
+#plt.show()
 
-print(f'Input: {inputs}, Label: {labels}')
+#inputs, labels = training_data[0], training_data[1]
+
+#print(f'Input: {inputs}, Label: {labels}')
 
 if train:
     criterion = nn.CrossEntropyLoss()
